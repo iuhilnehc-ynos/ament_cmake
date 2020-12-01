@@ -27,11 +27,7 @@ macro(_ament_cmake_gtest_find_gtest)
       set(_search_path_include "")
       set(_search_path_src "")
 
-      # option() consider environment variable to find gtest
-      if(NOT $ENV{GTEST_DIR} STREQUAL "")
-        list(APPEND _search_path_include "$ENV{GTEST_DIR}/include/gtest")
-        list(APPEND _search_path_src "$ENV{GTEST_DIR}/src")
-      endif()
+
 
       # check to system installed path (i.e. on Ubuntu)
       set(_search_path_include "/usr/include/gtest")
@@ -44,6 +40,18 @@ macro(_ament_cmake_gtest_find_gtest)
         list(INSERT _search_path_src 0 "${gtest_vendor_BASE_DIR}/src")
       endif()
 
+      # option() consider environment variable to find gtest
+      if(NOT $ENV{GTEST_DIR} STREQUAL "")
+        message(STATUS "$ENV{GTEST_DIR}")
+        list(INSERT _search_path_include 0 "$ENV{GTEST_DIR}/include/gtest")
+        list(INSERT _search_path_src 0 "$ENV{GTEST_DIR}/src")
+        if(NOT $ENV{GOOGLETEST_VERSION} STREQUAL "")
+          set(GOOGLETEST_VERSION $ENV{GOOGLETEST_VERSION})
+          message(STATUS "GOOGLETEST_VERSION: ${GOOGLETEST_VERSION}")
+        endif()
+      endif()
+
+      message(STATUS "1 ${_gtest_src_file}")
       find_file(_gtest_header_file "gtest.h"
         PATHS ${_search_path_include}
         NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH
@@ -54,6 +62,7 @@ macro(_ament_cmake_gtest_find_gtest)
         PATHS ${_search_path_src}
         NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH
       )
+      message(STATUS "2 ${_gtest_src_file}")
 
       if(_gtest_header_file AND _gtest_src_file)
         # set from-source variables
@@ -82,13 +91,16 @@ macro(_ament_cmake_gtest_find_gtest)
       # the subdirectory was already added by gmock
       if(NOT TARGET gtest)
         # add CMakeLists.txt from gtest dir
-        add_subdirectory("${GTEST_FROM_SOURCE_BASE_DIR}" "${CMAKE_BINARY_DIR}/gtest")
+        if ($ENV{GMOCK_DIR} STREQUAL "")
+                add_subdirectory("${GTEST_FROM_SOURCE_BASE_DIR}" "${CMAKE_BINARY_DIR}/gtest")
 
-        # mark gtest targets with EXCLUDE_FROM_ALL to only build
-        # when tests are built which depend on them
-        set_target_properties(gtest gtest_main PROPERTIES EXCLUDE_FROM_ALL 1)
-        target_include_directories(gtest BEFORE PUBLIC "${GTEST_FROM_SOURCE_INCLUDE_DIRS}")
-        target_include_directories(gtest_main BEFORE PUBLIC "${GTEST_FROM_SOURCE_INCLUDE_DIRS}")
+                # mark gtest targets with EXCLUDE_FROM_ALL to only build
+                # when tests are built which depend on them
+                set_target_properties(gtest gtest_main PROPERTIES EXCLUDE_FROM_ALL 1)
+                target_include_directories(gtest BEFORE PUBLIC "${GTEST_FROM_SOURCE_INCLUDE_DIRS}")
+                target_include_directories(gtest_main BEFORE PUBLIC "${GTEST_FROM_SOURCE_INCLUDE_DIRS}")
+        endif()
+
       endif()
 
       # set the same variables as find_package()
